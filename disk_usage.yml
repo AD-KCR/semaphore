@@ -1,0 +1,24 @@
+---
+- name: Monitor Disk Usage via Semaphore
+  hosts: all
+  gather_facts: yes
+  vars:
+    max_threshold: 85
+
+  tasks:
+    - name: Evaluate root directory disk usage
+      ansible.builtin.set_fact:
+        root_mount: "{{ ansible_mounts | selectattr('mount', 'equalto', '/') | first }}"
+
+    - name: Calculate usage percentage
+      ansible.builtin.set_fact:
+        disk_used_percent: "{{ ((root_mount.size_total - root_mount.size_available) / root_mount.size_total * 100) | round(1) }}"
+
+    - name: Display current disk status
+      ansible.builtin.debug:
+        msg: "Host {{ inventory_hostname }} root disk usage is at {{ disk_used_percent }}% (Available: {{ (root_mount.size_available / 1024 / 1024 / 1024) | round(1) }} GB out of {{ (root_mount.size_total / 1024 / 1024 / 1024) | round(1) }} GB)"
+
+    - name: Throw alert if usage exceeds threshold
+      ansible.builtin.fail:
+        msg: "CRITICAL: Disk usage on {{ inventory_hostname }} has breached the safety threshold! Current usage: {{ disk_used_percent }}% (Limit: {{ max_threshold }}%)"
+      when: disk_used_percent | float > max_threshold | float
