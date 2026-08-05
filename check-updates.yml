@@ -1,0 +1,16 @@
+---
+- name: Check for system updates
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Update APT cache (Debian/Ubuntu)
+      ansible.builtin.apt:
+        update_cache: true
+      when: ansible_os_family == "Debian"
+
+    - name: Check for DNF/YUM updates (RedHat/CentOS)
+      ansible.builtin.dnf:
+        list: updates
+      when: ansible_os_family == "RedHat"
